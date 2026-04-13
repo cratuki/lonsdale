@@ -1,0 +1,58 @@
+# r resource, file resources
+i resource resource_h mime_type path
+    # stuff that lives in folder ./res
+
+# l load
+i load load_h
+
+# c cocnnection standard and connection bridge
+i connection_standard cs_h
+i connection_bridge cs_h_a cs_h_b
+
+# t type-of-thing
+i type_qual k v # quality, e.g. colour trak_yellow or "" from empty or * for mandatory
+i type_port tport_h
+i type_create type_h
+
+# r recipe
+i rqual k v
+i rneed node_type_h
+i rqual k v
+i rsend node_type_h
+i recipe recipe_h
+
+# s site
+i site site_h
+    # Here is how we construct nodes
+    i qual k v
+    i port port_h cs_h load_h
+        i to port_h
+    i node node_h node_type_h
+
+    # Move things between sites
+    i credit site_h node_h
+    i debit site_h node_h
+
+    # Linking ports
+    i link port_h_a port_h_b
+    i unlink port_h_a port_h_b
+
+    # Crafting (calling recipes)
+    i cing node_h
+    i cout type_h node_h
+    i cook loc_h recipe_h
+
+    # Checks 
+    i check_here node_h
+    i check_empty
+    i check_build node_h design_i
+i site_x
+
+site denis
+
+site_x
+
+
+
+
+

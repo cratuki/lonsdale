@@ -1,0 +1,13 @@
+# bashford grid messages
+i sy sy_h
+sy y satisfied
+sy . partial
+sy n not_satisfied
+sy ? uncertain
+
+i goal goal_h s
+i strategy strategy_h
+    i heading s
+    i cell requirement_h sy_h
+i strategy_x
+

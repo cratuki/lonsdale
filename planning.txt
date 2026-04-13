@@ -1,0 +1,74 @@
+--------------------------------------------------------
+    20260412_self_lonsdale_markup_language_planning
+--------------------------------------------------------
+
+-- 0, overview
+
+Draft towards and beyond the initial github commit.
+
+
+-- 1, documentation sandbox
+
+[obsolete, have created README]
+
+
+-- 2, nodes that contain other nodes
+
+I want to be able to have this message in the script,
+
+    i assert_build node_h design_h
+
+How to do this? One way would be to have nodes that contain other nodes. But I
+am not fond of this. I would rather have ports.
+
+I suppose you could have this,
+
+    port our_gearbox.in
+    node our_gearbox
+
+    port our_vehicle.has our_gearbox none
+    node our_vehicle
+
+Basically it is defining a bag interface at one end, and then a baggable
+interface at the other side. It is janky.
+
+Don't do this. Instead, have assert_build work recursively.
+
+
+-- n, activity
+
+done,
++ stub a design_i in ./design
++ think: nodes that contain other nodes
+    # /it may be that we need for nodes to be able to contain other nodes.
+    # /see $2
+    # /decided not to do this.
++ copy in the draftd markup from the ipad
++ think: can we move things if they are still connected?
+    # /we need work messages for linking and unlinking.
+    #   /link
+    #   /unlink
+    # /maybe move needs to operate on a graph of connected things.
+    #
+    # /yes. do that. so we will need a function that easily gets a graph of
+    # connected nodes. because we now have a couple of situations where we
+    # are seeking this functionality.
+    #
+    # /insight: have a convention of referring to a car by its shell.
+
+work,
+- get basic project into github
+- get a basic compiler working
+- work out a meeting with kenny for friday
+..
+- work out what to do for bashford grids
+    # /reckon it would be good to have this in bashford in the project.
+
+
+
+
+
+
+
+
+
