@@ -129,8 +129,8 @@ class SignalConsumerAsync(object):
         method = getattr(self.handler, method_name)
         argspec = list(inspect.signature(method).parameters.keys())
         if argspec != vfields and not (len(argspec) == 1 and argspec[0] == 'kwargs'):
-            raise Exception('inconsistent spec for %s got:%s method:%s'%(
-                iname, str(argspec), str(vfields)))
+            raise Exception('inconsistent spec for %s iscript:%s method:%s'%(
+                iname, str(vfields), str(argspec)))
 
     async def on_signal(self, iname, kwargs):
         method_name = 'on_%s'%iname
@@ -240,8 +240,8 @@ class SignalConsumerSync(object):
         method = getattr(self.handler, method_name)
         argspec = list(inspect.signature(method).parameters.keys())
         if argspec != vfields and not (len(argspec) == 1 and argspec[0] == 'kwargs'):
-            raise Exception('inconsistent spec for %s got:%s method:%s'%(
-                iname, str(argspec), str(vfields)))
+            raise Exception('inconsistent spec for %s iscript:%s method:%s'%(
+                iname, str(vfields), str(argspec)))
 
     def on_signal(self, iname, kwargs):
         method_name = 'on_%s'%iname
