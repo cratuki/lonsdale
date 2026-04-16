@@ -1,0 +1,254 @@
+i include relpath
+    # This allows us to inlude other design_i files. Consider if we had a
+    # design_i file that contained the complete parts catalogue for peugeot
+    # 5-series cars. We would then want to be able to include that at the top
+    # of all designs which were building cars based on that system. We would
+    # not want to have to duplicate that data (hundreds of lines) at the top
+    # of each design.
+
+i resource resource_h mime_type path
+    # Stuff that lives in folder ./res. It is my intent at a later time that I
+    # an refer to diagrams in the course of a plan. At the time of writing, I
+    # have not yet created a message that allows this.
+
+i cs cs_h
+    # Connection Standard
+    #
+    # This refers to the shape of things that can be connected to one another.
+    #
+    # A standard Australian power socket is called "Type I". This could be
+    # represented as a connection standard. A cs could be used to described
+    # the bell house interface of a gearbox.
+    #
+    # During early drafting, you may want to pencil some of these in as
+    # /unsure/. This allows you to build a structure of interconnected things,
+    # checked by the compiler. But then you can come back later and backflil
+    # things that you were unsure about.
+
+i compat x_cs_h y_cs_h
+    # Define valid connetions that work between types of socks.
+
+i load load_h
+    # Load refers to concepts that can be transferred over a link between
+    # systems. For connections between wires, it might be 12V or 5V. For
+    # connections between parts of the drive-train it might be a torque
+    # figure.
+    #
+    # Where this kind of marking is not useful, set this to /na/. (not
+    # applicable)
+
+i type type_h
+    i tqual k v # quality, e.g. colour trak_yellow or "" from empty or * for mandatory
+    i tport tport_h cs_h
+i type_x
+
+i ps ps_h manufacturer code description
+    # Part specification
+
+i recipe recipe_h
+    i rneed h type_h
+    i rsend h type_h
+    i rqual h k v
+i recipe_x
+
+i site site_h
+    i node node_h type_h
+        i qual k v
+        i port port_h load_h
+            i to portref
+    i node_x
+i site_x
+
+i plan plan_h floor_site_h
+    # Move one part (which must have no connected ports) between sites
+    i move src_siteref node_h dst_site_h
+
+    # Move a graph of connected items between sites
+    i mall src_siteref node_h dst_site_h
+
+    # Setters
+    i set_load portref load_h
+    i set_qual noderef k v
+
+    # Linking ports
+    i link x_portref y_portref
+    i unlink x_portref y_portref
+
+    # Crafting (calling recipes)
+    i cook loc_h recipe_h
+        i use node_h # ingredient
+        i out type_h node_h # output
+    i cook_x
+
+    # Checks 
+    i check_free node_h
+    i check_flush node_h
+    i check_here node_h
+    i check_empty
+    i check_build noderef design_i design_site_h design_node_h
+        # Check that noderef is equivalent to the node referred to in another
+        # design. The intent of this is that it allows us to (a) design an
+        # expected end-state in design_i/design_site_h/design_node_h and then
+        # (b) write a plan for changing a car shell into that outcome and then
+        # (c) do a programmatic diff between the two object-graphs to test
+        # equivalence.
+i plan_x
+
+# --------------------------------------------------------
+#   Placeholders
+# --------------------------------------------------------
+load l_unknown
+cs cs_unknown
+
+
+# --------------------------------------------------------
+#   Connection standards
+# --------------------------------------------------------
+#
+# Each of these defines a connection standard that is one half of a connection.
+#
+# Examples,
+#
+#   cs cs_uk_c13_power_female
+#   cs cs_uk_c13_power_male
+#
+# Keep these strictly in alphabetical order
+#
+cs cs_504_shell_front_subframe_mounts       # 4x M12 captive nuts in front chassis rails
+cs cs_504_shell_rear_crossmember_mounts     # Pivot points for the independent rear suspension (IRS)
+cs cs_504_shell_steering_column_bulkhead    # Interface where the steering rack shaft meets the cabin
+cs cs_504_shell_strut_tower_top             # 3-bolt pattern for front MacPherson struts
+
+cs cs_504_steering_pinion_shaft             # The pinion shaft that goes through the bulkhead to the column
+cs cs_504_steering_rack_mounts              # How the rack bolts to the subframe (2-bolt mount)
+cs cs_504_steering_tie_rod_end              # The tie-rod ends (track rod ends) that connect to the steering arms/hubs
+
+cs cs_504_subframe_to_arb                   # To Anti-roll-bar
+cs cs_504_subframe_to_steering_rack
+cs cs_504_subframe_to_lower_control_arm     # Interface between the subframe and the lower control arms (wishbones)
+
+cs cs_ba7_bell_for_pushrod_engines
+cs cs_ba7_cup_for_torque_tube_ball
+cs cs_ba7_input_spline
+cs cs_ba7_manual_selectors
+cs cs_ba7_output_spline_shaft
+cs cs_ba7_rear_rubber_mount
+
+cs cs_torque_tube_ball_for_gearbox_end
+cs cs_torque_tube_spline_sleeve
+
+
+
+# --------------------------------------------------------
+#   Compatibility bridges
+# --------------------------------------------------------
+#
+# Each entry here shows two things which can validly connect to one another.
+#
+# Example,
+#
+#   compat cs_uk_c13_power_female cs_uk_c13_power_male
+#
+# The connection definition works both ways. That is, once the compiler knows
+# that a C13 female can connect to a male, it also knows that a C13 male can
+# connect to a female.
+#
+# Keep these strictly in alphabetical order. The first cs in each compat entry
+# should always be in alphabetical order ahead of the second.
+#
+compat cs_504_shell_steering_column_bulkhead cs_504_steering_pinion_shaft
+
+compat cs_ba7_cup_for_torque_tube_ball cs_torque_tube_ball_for_gearbox_end
+compat cs_ba7_output_spline_shaft cs_torque_tube_spline_sleeve
+
+type t_504_gl_shell
+    # Front Suspension Ports
+    tport mount_front_subframe      cs_504_shell_front_subframe_mounts
+    tport mount_strut_tower_lh      cs_504_shell_strut_tower_top
+    tport mount_strut_tower_rh      cs_504_shell_strut_tower_top
+    
+    # Rear Suspension Ports
+    tport mount_rear_crossmember    cs_504_shell_rear_crossmember_mounts
+    
+    # Steering
+    tport steering_bulkhead_entry   cs_504_shell_steering_column_bulkhead
+type_x
+
+type t_504_gl_front_subframe
+    # Connection back to the car shell
+    tport shell_mounts              cs_504_shell_front_subframe_mounts
+    
+    # Connection to the steering rack
+    tport steering_rack_mount       cs_504_subframe_to_steering_rack
+    
+    # Connections to the lower suspension arms
+    tport wishbone_mount_lh         cs_504_subframe_to_lower_control_arm
+    tport wishbone_mount_rh         cs_504_subframe_to_lower_control_arm
+    
+    # Connection to the anti-roll bar
+    tport arb_mounts                cs_504_subframe_to_arb
+type_x
+
+type t_504_steering_rack
+    # The pinion shaft that enters the cabin
+    tport pinion_input              cs_504_steering_pinion_shaft
+    
+    # Mounting point to the subframe
+    tport subframe_attachment       cs_504_subframe_to_steering_rack
+    
+    # Inner tie-rod connections to the steering arms (on the hubs)
+    tport tie_rod_lh                cs_504_steering_tie_rod_end
+    tport tie_rod_rh                cs_504_steering_tie_rod_end
+type_x
+
+type t_ba7_4_gearbox
+    tport input_bell                cs_ba7_bell_for_pushrod_engines
+    tport input_spline              cs_ba7_input_spline
+    tport tt_cup                    cs_ba7_cup_for_torque_tube_ball
+    tport output_spline             cs_ba7_output_spline_shaft
+    tport chassis_mount             cs_ba7_rear_rubber_mount
+    tport selector_set              cs_ba7_manual_selectors
+type_x
+
+type t_ba7_5_gearbox
+    # xxx define content after the ba7/4 is stable
+type_x
+
+site jonhardy
+    # supplier
+    node ba7_4_gearbox_aa t_ba7_4_gearbox
+        port input_bell     l_unknown
+        port input_spline   l_unknown
+        port tt_cup         l_unknown
+        port output_spline  l_unknown
+        port chassis_mount  l_unknown
+        port selector_set   l_unknown
+    node_x
+site_x
+
+site ustorit
+    # personal storage
+site_x
+
+site hypothetical
+    node car t_504_gl_shell
+        port mount_front_subframe       l_unknown
+        port mount_strut_tower_lh       l_unknown
+        port mount_strut_tower_rh       l_unknown
+        port mount_rear_crossmember     l_unknown
+        port steering_bulkhead_entry    l_unknown
+    node_x
+site_x
+
+site rig
+    # this is the vehicle we are building
+site_x
+
+plan p_a rig
+
+
+plan_x
+
+
+
+

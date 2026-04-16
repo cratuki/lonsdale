@@ -1,5 +1,6 @@
 import difflib
 import os
+import time
 
 def util_attach_log(ob):
     lst = []
@@ -102,7 +103,7 @@ def util_read_file(path):
     return data
 
 def util_time_logger(m=''):
-    t = time.strftime('%Y%m%d %H:%M.%S')
+    t = time.strftime('%Y%m%d %H%M%S')
     for line in m.split('\n'):
-        print(f'{t}: {line}')
+        print(f'{t} {line}')
     

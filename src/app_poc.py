@@ -6,93 +6,376 @@ from .util import util_time_logger as logger
 
 import os
 import sys
+from types import SimpleNamespace as Ns
 
 BASEDIR = util_get_basedir()
 
 DIR_DESIGN = os.path.join(BASEDIR, 'design')
 
+class Load:
+    '''
+    Represents what is transmitted through a link between ports. Some examples:
+    power_12v, oil, torque_to_150nm.
+    '''
 
-class Design:
+    def __init__(self, load_h):
+        self.load_h = load_h
 
-    def __init__(self, logger):
-        self.logger = logger
 
-        util_attach_log(self)
+class Tqual:
+    '''
+    A quality that can be attached to a type.
+    '''
+
+    def __init__(self, k, v):
+        self.k = k
+        self.v = v
+
+
+class Type:
+
+    def __init__(self, type_h):
+        self.type_h = type_h
+
+        self.d_tqual = {}
+        self.d_tport = {}
+
+    def add_tqual(self, k, v):
+        if k in self.d_tqual:
+            raise Exception(f'Dupe tqual for key {k}')
+        self.d_tqual = Tqual(k=k, v=v)
+
+    def add_tport(self, tport_h, cs_h):
+        if tport_h in self.d_tport:
+            raise Exception(f'Dupe tport for key {k}')
+        self.d_tport[tport_h] = cs_h
 
 
 class Site:
 
-    def __init__(self):
-        xxx
+    def __init__(self, site_h):
+        self.site_h = site_h
+
+        self.d_node = {}
+
+
+class Node:
+
+    def __init__(self, design, node_h, type_h):
+        self.design = design
+        self.node_h = node_h
+        self.type_h = type_h
+
+        self.d_port = {}
+
+    def validate_ports_exist(self):
+        '''
+        Validate the car against its type. The notation needs to have
+        represented each of the ports.
+
+        Returns an empty list when there are no problems.
+        '''
+        lst_problem = []
+
+        # Check that we have everything that the type says we should have.
+        t = self.design.d_type[self.type_h]
+        for (tport_h, cs_h) in t.d_tport.items():
+            if tport_h not in self.d_port:
+                lst_problem.append(f'Missing port {tport_h}')
+
+        # Check that we don't have anything unknown to the type.
+        for (port_h, load_h) in self.d_port.items():
+            if port_h not in t.d_tport.keys():
+                lst_problem.append(f'Unknown port {port_h}')
+
+        return lst_problem
+
+class Plan:
+
+    def __init__(self, plan_h, floor_site_h):
+        self.plan_h = plan_h
+        self.floor_site_h = floor_site_h
+            # This is the 'floor' site_h, and is relevant within
+            # plan scopes. When the user specifies the default through
+            # use of a period, it will use this site.
+
+
+class Design:
+
+    def __init__(self, logger, dir_design, design_h):
+        self.logger = logger
+        self.dir_design = dir_design
+        self.design_h = design_h
+
+        util_attach_log(self)
+
+        self.d_cs = {}
+        self.d_compat = {}
+        self.d_load = {}
+        self.d_type = {}
+        self.d_site = {}
+        self.d_plan = {}
+
+    def add_compat(self, x_cs_h, y_cs_h):
+        # xxx do an alphabetical order test here to make sure that x is
+        # less-than-or-equal-to y in alphabetical ordering. Throw an exception
+        # if they are not.
+
+        for cs_h in (x_cs_h, y_cs_h):
+            if cs_h not in self.d_cs:
+                raise Exception(f'Unknown connection-standard {cs_h}')
+        del cs_h
+
+        def ensure(cs_h):
+            if cs_h not in self.d_compat:
+                self.d_compat[cs_h] = set()
+
+        ensure(x_cs_h)
+        self.d_compat[x_cs_h].add(y_cs_h)
+
+        ensure(y_cs_h)
+        self.d_compat[y_cs_h].add(x_cs_h)
 
 
 class DesignIHandler:
 
-    def __init__(self, logger):
+    def __init__(self, logger, dir_design, design_h):
         self.logger = logger
+        self.dir_design = dir_design
+        self.design_h = design_h
 
         util_attach_log(self)
 
         self.design = Design(
-            logger=self.logger)
+            logger=self.logger,
+            dir_design=self.dir_design,
+            design_h=design_h)
 
+        self.active_type = None
         self.active_site = None
+        self.active_node = None
+        self.active_plan = None
+
+    def on_include(self, relpath):
+        '''
+        Use the current handler to parse another file that is within the same
+        directory.
+        '''
+        xxx
 
     def on_resource(self, resource_h, mime_type, path):
         xxx
 
+    def on_cs(self, cs_h):
+        if not cs_h.startswith('cs_'):
+            raise Exception("Connection standard names must start cs_")
+
+        ns_cs = Ns()
+        self.design.d_cs[cs_h] = ns_cs
+
+    def on_compat(self, x_cs_h, y_cs_h):
+        self.design.add_compat(
+            x_cs_h=x_cs_h,
+            y_cs_h=y_cs_h)
+
     def on_load(self, load_h):
+        load = Load(
+            load_h=load_h)
+        self.design.d_load[load_h] = load
+
+    def on_type(self, type_h):
+        if self.active_type != None:
+            raise Exception('You cannot nest types')
+        if type_h in self.design.d_type:
+            raise Exception(f'Dupe type {type_h}')
+
+        if not type_h.startswith('t_'):
+            raise Exception('Types must begin with /t_/.')
+
+        type = Type(
+            type_h=type_h)
+        self.design.d_type[type_h] = type
+        self.active_type = type
+
+    def on_ps(self, ps_h, manufacturer, code, description):
+        '''
+        Part specification.
+        '''
         xxx
 
-    def on_connection_standard(self, cs_h):
-        xxx
+    def on_tqual(self, k, v):
+        if self.active_type == None:
+            raise Exception('Message tqual is only valid within a type scope')
+        self.active_type.add_tqual(
+            k=k,
+            v=v)
 
-    def on_connection_bridge(self, cs_h_a, cs_h_b):
-        xxx
+    def on_tport(self, tport_h, cs_h):
+        if self.active_type == None:
+            raise Exception('Message tport is only valid within a type scope')
+        if tport_h in self.active_type.d_tport:
+            raise Exception(f'Dupe tport_h {tport_h}')
+        if cs_h not in self.design.d_cs:
+            raise Exception(f'Unknown connection standard (cs) {cs_h}')
+        self.active_type.add_tport(
+            tport_h=tport_h,
+            cs_h=cs_h)
 
-    def on_type_qual(self, k, v):
-        xxx
+    def on_type_x(self):
+        if self.active_type == None:
+            raise Exception('There is no open type scope')
 
-    def on_type_port(self, tport_h):
-        xxx
-
-    def on_type_create(self, type_h):
-        xxx
-
-    def on_rqual(self, k, v):
-        xxx
-
-    def on_rneed(self, node_type_h):
-        xxx
-
-    def on_rsend(self, node_type_h):
-        xxx
+        self.active_type = None
 
     def on_recipe(self, recipe_h):
         xxx
 
-    def on_site(self, site_h):
+    def on_rneed(self, h, type_h):
         xxx
+
+    def on_rsend(self, h, type_h):
+        xxx
+
+    def on_rqual(self, h, k, v):
+        '''
+        Allows you to set qualities against rneed and rsent definitions in the
+        current scope.
+        '''
+        xxx
+
+    def on_recipe_x(self):
+        xxx
+
+    def on_site(self, site_h):
+        if self.active_site != None:
+            raise Exception('You cannot nest sites.')
+        if site_h in self.design.d_site:
+            raise Exception(f'Dupe site {site_h}')
+
+        site = Site(
+            site_h=site_h)
+        self.design.d_site[site_h] = site
+        self.active_site = site
+
+    def on_node(self, node_h, type_h):
+        if self.active_site == None:
+            raise Exception('Nodes must be defined within sites.')
+        if self.active_node != None:
+            raise Exception('You cannot nest nodes.')
+
+        node = Node(
+            design=self.design,
+            node_h=node_h,
+            type_h=type_h)
+        self.active_site.d_node[node_h] = node
+        self.active_node = node
 
     def on_qual(self, k, v):
         xxx
 
-    def on_port(self, port_h, cs_h, load_h):
+    def on_port(self, port_h, load_h):
+        if self.active_node == None:
+            raise Exception(f'Ports must be defined within nodes')
+        if port_h in self.active_node.d_port:
+            raise Exception(f'Dupe port definition {port_h}')
+
+        self.active_node.d_port[port_h] = load_h
+
+    def on_node_x(self):
+        if self.active_node == None:
+            raise Exception('There is no node scope open.')
+
+        lst_problem = self.active_node.validate_ports_exist()
+        if lst_problem:
+            self.logger()
+            self.logger(f'Node {self.active_node.node_h} failed validation')
+            self.logger(f'That node has type {self.active_node.type_h}')
+            self.logger('Problems:')
+            for s in lst_problem:
+                self.logger(f'- {s}')
+            self.logger()
+            raise Exception('Failed port validation. See text above')
+        del lst_problem
+
+        logger('xxx validate node against its type')
+            # /in particular, that it has the right ports.
+
+        self.active_node = None
+
+    def on_site_x(self):
+        if self.active_site == None:
+            raise Exception('There is no site scope open.')
+        if self.active_node != None:
+            raise Exception('There is a node scope that is not closed.')
+
+        self.active_site = None
+
+    def on_plan(self, plan_h, floor_site_h):
+        print(f'xxx plan {plan_h}')
+
+        if self.active_plan != None:
+            raise Exception('Plans cannot be nested')
+        if plan_h in self.design.d_plan:
+            raise Exception(f'Dupe plan_h {plan_h}')
+
+        plan = Plan(
+            plan_h=plan_h,
+            floor_site_h=floor_site_h)
+        self.design.d_plan[plan_h] = plan
+        self.active_plan = plan
+
+    def on_set_load(self, portref, load_h):
+        """
+        Modify a qual against a node
+        """
         xxx
 
-    def on_node(self, node_h, node_type_h):
+    def on_set_qual(self, noderef, k, v):
+        """
+        Modify a qual against a node
+        """
         xxx
 
-    def on_to(self, port_h):
+    def on_move(self, src_siteref, node_h, dst_site_h):
+        xxx
+
+    def on_mall(self, src_siteref, node_h, dst_site_h):
+        xxx
+
+    def on_link(self, x_portref, y_portref):
+        xxx
+
+    def on_unlink(self, x_portref, y_portref):
+        xxx
+
+    def on_to(self, portref):
         '''
         Links the port that is currently in scope to this other port.
         '''
         xxx
 
-    def on_credit(self, site_h, node_h):
+    def on_cook(self, loc_h, recipe_h):
         xxx
 
-    def on_debit(self, site_h, node_h):
+    def on_use(self, node_h):
+        xxx
+
+    def on_out(self, type_h, node_h):
+        xxx
+
+    def on_cook_x(self):
+        xxx
+
+    def on_check_free(self, node_h):
+        '''
+        Check that a node is not linked.
+        '''
+        xxx
+
+    def on_check_flush(self, node_h):
+        '''
+        Check that a node is fully-connected.
+        '''
         xxx
 
     def on_check_here(self, node_h):
@@ -109,29 +392,24 @@ class DesignIHandler:
         '''
         xxx
 
-    def on_check_build(self, our_node_h, design_i, design_site_h, design_node_h):
+    def on_check_build(self, noderef, design_i, design_site_h, design_node_h):
         '''
         Compare the graph of the item in node_h in the scope of the current
         site to design_i/design_site_h/design_node_h.
 
-        It will start out by comparing that the type of the two things are
+        This will start out by comparing that the type of the two things are
         equivalent. Then, it will recursively follow the graph of all the
         things that connect to the nodes to check that there relations are
         equivalent. It has an internal cache to avoid getting lost in cycles.
+
+        This should not only output true-or-false. It should make a reasonable
+        effort to capture the places where the graphs are inconsistent, and to
+        present this information to the user that ran the program.
         '''
         xxx
 
-    def on_site_x(self):
-        xxx
-
-    def on_cing(self, node_h):
-        xxx
-
-    def on_cout(self, type_h, node_h):
-        xxx
-
-    def on_cook(self, loc_h, recipe_h):
-        xxx
+    def on_plan_x(self):
+        self.active_plan = None
 
 
 class Folio:
@@ -144,7 +422,11 @@ class Folio:
         self.lst_design.append(design)
 
     def __repr__(self):
-        return '[Folio.__repr__]'
+        sb = ['Folio {']
+        for design in self.lst_design:
+            sb.append(f'    {design.design_h}')
+        sb.append('}')
+        return '\n'.join(sb)
 
 
 def main():
@@ -157,13 +439,23 @@ def main():
 
     for fname in lst_design_filename:
         if fname.startswith('.'): continue
+
+        print(f'// {fname}')
+
         path_design = os.path.join(DIR_DESIGN, fname)
         if not os.path.exists(path_design):
             raise Exception(f'No design file {path_design}')
 
+        if fname.endswith('.design_i'):
+            design_h = '.'.join(fname.split('.')[:-1])
+        else:
+            design_h = fname
+
         data_i= util_read_file(path_design)
         handler = DesignIHandler(
-            logger=logger)
+            logger=logger,
+            dir_design=DIR_DESIGN,
+            design_h=design_h)
         interface_script_parse(
             data_i=data_i,
             handler=handler)
@@ -171,10 +463,10 @@ def main():
         folio.add_design(
             design=handler.design)
 
-    interface_script_parse(
-        data_i=data_i,
-        handler=handler)
-
+    # xxx
+    print()
+    print()
+    print()
     print(folio)
 
 if __name__ == '__main__':
