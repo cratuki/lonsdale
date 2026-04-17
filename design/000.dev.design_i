@@ -311,7 +311,7 @@ site_x
 
 
 # Imported to Australia from 1984
-site ref_505gti_series
+site ref_505gti_series_i
     node shell
 
     node_x
