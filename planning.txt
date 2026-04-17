@@ -56,15 +56,11 @@ done,
     #
     # /insight: have a convention of referring to a car by its shell.
 + get basic project into github
++ refactor away from types
++ remove crafting
 
 work,
-- refactor away from types
-- remove crafting
-- keep refining the text towards a basic compiler
-    # /I find I am wanting to move things into blocks rather than sticking
-    # with the end-def thing I had planned to use. I cannot quite say why,
-    # but I find it easier to work with these blocks.
-- work out a meeting with kenny for friday
+- represent a reference 504 in the dsl
 ..
 - work out what to do for bashford grids
     # /reckon it would be good to have this in bashford in the project.

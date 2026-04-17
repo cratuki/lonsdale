@@ -43,7 +43,7 @@ i ps ps_h manufacturer code description
 i site site_h
     i node node_h
         i qual k v
-        i port port_h cs_h load_h
+        i port port_h cs_h
             i to portref
     i node_x
 i site_x
@@ -97,6 +97,20 @@ cs cs_unknown
 #
 # Keep these strictly in alphabetical order
 #
+
+# arb: anti-roll-bar
+cs cs_504_arb_to_lca                        # Where the arb meets the control arm
+
+cs cs_504_hub_to_steering_arm               # Interface for the tie-rod end
+cs cs_504_hub_lca_mount                     # The socket on the hub/upright
+cs cs_504_hub_to_brake_disc                 # Interface for the front rotor.
+cs cs_504_hub_to_strut                      # Mounting point for bottom of MacPherson strut.
+
+# lca: lower control arms
+cs cs_504_lca_inner_pivot                   # The "male" side of the arm pivot
+cs cs_504_lca_outer_ball_joint              # The ball joint on the end of the arm
+cs cs_504_lca_wishbone_to_subframe          # Pivot points where arm meets subframe
+
 cs cs_504_shell_front_subframe_mounts       # 4x M12 captive nuts in front chassis rails
 cs cs_504_shell_rear_crossmember_mounts     # Pivot points for the independent rear suspension (IRS)
 cs cs_504_shell_steering_column_bulkhead    # Interface where the steering rack shaft meets the cabin
@@ -106,9 +120,16 @@ cs cs_504_steering_pinion_shaft             # The pinion shaft that goes through
 cs cs_504_steering_rack_mounts              # How the rack bolts to the subframe (2-bolt mount)
 cs cs_504_steering_tie_rod_end              # The tie-rod ends (track rod ends) that connect to the steering arms/hubs
 
+cs cs_504_subframe_lca_mount                # The female mounting point on subframe
 cs cs_504_subframe_to_arb                   # To Anti-roll-bar
 cs cs_504_subframe_to_steering_rack
-cs cs_504_subframe_to_lower_control_arm     # Interface between the subframe and the lower control arms (wishbones)
+
+cs cs_504_steering_column_to_pinion      # Interface to the rack's pinion shaft
+cs cs_505_steering_pinion_shaft
+cs cs_504_steering_wheel_spline          # Interface for the steering wheel itself
+cs cs_505_subframe_to_steering_rack
+cs cs_505_steering_tie_rod_end
+cs cs_505_steering_tie_rod_end
 
 cs cs_ba7_bell_for_pushrod_engines
 cs cs_ba7_cup_for_torque_tube_ball
@@ -139,7 +160,24 @@ cs cs_torque_tube_spline_sleeve
 # Keep these strictly in alphabetical order. The first cs in each compat entry
 # should always be in alphabetical order ahead of the second.
 #
+compat cs_504_arb_to_lca cs_504_arb_to_lca
+
+compat cs_504_hub_lca_mount cs_504_lca_outer_ball_joint # Outer pivot
+compat cs_504_hub_to_steering_arm cs_504_steering_tie_rod_end
+compat cs_504_hub_to_strut cs_504_hub_to_strut
+
+compat cs_504_lca_inner_pivot cs_504_subframe_lca_mount # Inner pivot
+
+compat cs_504_shell_front_subframe_mounts cs_504_shell_front_subframe_mounts
 compat cs_504_shell_steering_column_bulkhead cs_504_steering_pinion_shaft
+compat cs_504_shell_strut_tower_top cs_504_shell_strut_tower_top
+
+compat cs_504_steering_column_to_pinion cs_504_steering_pinion_shaft
+
+compat cs_504_steering_wheel_spline cs_504_steering_wheel_spline
+
+compat cs_504_subframe_to_steering_rack cs_504_subframe_to_steering_rack
+compat cs_504_subframe_to_arb cs_504_subframe_to_arb
 
 compat cs_ba7_cup_for_torque_tube_ball cs_torque_tube_ball_for_gearbox_end
 compat cs_ba7_output_spline_shaft cs_torque_tube_spline_sleeve
@@ -148,54 +186,150 @@ compat cs_ba7_output_spline_shaft cs_torque_tube_spline_sleeve
 # --------------------------------------------------------
 #   Reference designs
 # --------------------------------------------------------
-site ref_504gl_1974_renault_australia
+site ref_504gl_renault_australia_1974
+    #
+    # // Structure
+    #
     node shell
         # Front Suspension Ports
-        port mount_front_subframe   cs_504_shell_front_subframe_mounts    l_unknown
-        port mount_strut_tower_lh   cs_504_shell_strut_tower_top          l_unknown
-        port mount_strut_tower_rh   cs_504_shell_strut_tower_top          l_unknown
+        port mount_front_subframe   cs_504_shell_front_subframe_mounts
+        port mount_strut_tower_lh   cs_504_shell_strut_tower_top
+        port mount_strut_tower_rh   cs_504_shell_strut_tower_top
 
         # Rear Suspension Ports
-        port mount_rear_crossmember cs_504_shell_rear_crossmember_mounts  l_unknown
+        port mount_rear_crossmember cs_504_shell_rear_crossmember_mounts
 
         # Steering bulkhead
-        port steer_bhead_entry      cs_504_shell_steering_column_bulkhead l_unknown
+        port steer_bhead_entry      cs_504_shell_steering_column_bulkhead
     node_x
 
     node front_subframe
         # Connection back to the car shell
-        port shell_mounts           cs_504_shell_front_subframe_mounts    l_unknown
+        port shell_mounts           cs_504_shell_front_subframe_mounts
+            to shell.mount_front_subframe
         
         # Connection to the steering rack
-        port steering_rack_mount    cs_504_subframe_to_steering_rack      l_unknown
+        port steering_rack_mount    cs_504_subframe_to_steering_rack
         
         # Connections to the lower suspension arms
-        port wishbone_mount_lh      cs_504_subframe_to_lower_control_arm  l_unknown
-        port wishbone_mount_rh      cs_504_subframe_to_lower_control_arm  l_unknown
+        port wishbone_mount_lh      cs_504_subframe_lca_mount
+        port wishbone_mount_rh      cs_504_subframe_lca_mount
         
         # Connection to the anti-roll bar
-        port arb_mounts             cs_504_subframe_to_arb                l_unknown
+        port arb_mounts             cs_504_subframe_to_arb
+    node_x
+
+    #
+    # // Front suspension
+    #
+    node front_anti_roll_bar
+        # The ARB connects to the subframe via bushings
+        port subframe_link      cs_504_subframe_to_arb
+            to front_subframe.arb_mounts
+        
+        # The ARB ends connect to the Lower Control Arms (LCA)
+        # Note: These usually involve drop links or bushings depending on specific year
+        port lca_interface_lh   cs_504_arb_to_lca
+        port lca_interface_rh   cs_504_arb_to_lca
+    node_x
+
+    node lower_control_arm_lh
+        # Pivot connection to the subframe
+        port subframe_pivot     cs_504_lca_inner_pivot
+            to front_subframe.wishbone_mount_lh
+        
+        # Connection to the Anti-roll bar
+        port arb_mount          cs_504_arb_to_lca
+            to front_anti_roll_bar.lca_interface_lh
+
+        # Ball joint connection for the hub
+        port hub_interface      cs_504_lca_outer_ball_joint
+    node_x
+
+    node front_hub_lh
+        # Connection to the steering rack
+        port steering_interface cs_504_hub_to_steering_arm
+        
+        # Connection to the lower control arm (wishbone)
+        port lower_arm_mount    cs_504_hub_lca_mount
+            to lower_control_arm_lh.hub_interface
+        
+        # Future ports for MacPherson strut and Brakes
+        port strut_mount        cs_504_hub_to_strut
+        port brake_interface    cs_504_hub_to_brake_disc
+    node_x
+
+    node front_strut_lh
+        # Top mount connects to the inner wing/strut tower
+        port top_mount          cs_504_shell_strut_tower_top
+            to shell.mount_strut_tower_lh
+            
+        # Bottom of the strut assembly connects to the hub
+        port hub_attachment     cs_504_hub_to_strut
+            to front_hub_lh.strut_mount
+    node_x
+
+    #
+    # // Steering systems
+    #
+    node steering_column
+        port rack_interface         cs_504_steering_column_to_pinion
+        port wheel_mount            cs_504_steering_wheel_spline
     node_x
 
     node steering_rack
         # The pinion shaft that enters the cabin
-        port pinion_input          cs_504_steering_pinion_shaft           l_unknown
+        port pinion_input           cs_504_steering_pinion_shaft
         
         # Mounting point to the subframe
-        port subframe_attachment   cs_504_subframe_to_steering_rack       l_unknown
+        port subframe_attachment    cs_504_subframe_to_steering_rack
+            to front_subframe.steering_rack_mount
         
         # Inner tie-rod connections to the steering arms (on the hubs)
-        port tie_rod_lh            cs_504_steering_tie_rod_end            l_unknown
-        port tie_rod_rh            cs_504_steering_tie_rod_end            l_unknown
+        port tie_rod_lh             cs_504_steering_tie_rod_end
+            to front_hub_lh.steering_interface
+        port tie_rod_rh             cs_504_steering_tie_rod_end
+    node_x
+
+    # I believe there were two generations of steering wheel in Australia, that
+    # changed with the dash. I understand the coupling to be compatible between
+    # them.
+    node steering_wheel_1974
+        port column_interface       cs_504_steering_wheel_spline
+            to steering_column.wheel_mount
     node_x
 
     node ba74_gearbox
-        port input_bell            cs_ba7_bell_for_pushrod_engines  l_unknown
-        port input_spline          cs_ba7_input_spline              l_unknown
-        port tt_cup                cs_ba7_cup_for_torque_tube_ball  l_unknown
-        port output_spline         cs_ba7_output_spline_shaft       l_unknown
-        port chassis_mount         cs_ba7_rear_rubber_mount         l_unknown
-        port selector_set          cs_ba7_manual_selectors          l_unknown
+        port input_bell             cs_ba7_bell_for_pushrod_engines
+        port input_spline           cs_ba7_input_spline
+        port tt_cup                 cs_ba7_cup_for_torque_tube_ball
+        port output_spline          cs_ba7_output_spline_shaft
+        port chassis_mount          cs_ba7_rear_rubber_mount
+        port selector_set           cs_ba7_manual_selectors
+    node_x
+site_x
+
+
+# Imported to Australia from 1984
+site ref_505gti_series
+    node shell
+
+    node_x
+
+    node steering_rack
+        port pinion_input          cs_505_steering_pinion_shaft
+        port subframe_attachment   cs_505_subframe_to_steering_rack
+        port tie_rod_lh            cs_505_steering_tie_rod_end
+        port tie_rod_rh            cs_505_steering_tie_rod_end
+    node_x
+
+    node ba75_gearbox
+        port input_bell            cs_ba7_bell_for_pushrod_engines
+        port input_spline          cs_ba7_input_spline
+        port tt_cup                cs_ba7_cup_for_torque_tube_ball
+        port output_spline         cs_ba7_output_spline_shaft
+        port chassis_mount         cs_ba7_rear_rubber_mount
+        port selector_set          cs_ba7_manual_selectors
     node_x
 site_x
 

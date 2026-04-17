@@ -40,25 +40,30 @@ class Site:
         self.d_node = {}
 
 
+class Port:
+
+    def __init__(self, port_h, cs_h):
+        # For the time being I have removed load_h from ports, as it was a
+        # distraction from our immediate goals.
+        self.port_h = port_h
+        self.cs_h = cs_h
+
+        self.link_portref = None
+
+    def __repr__(self):
+        return self.port_h
+
+
 class Node:
 
     def __init__(self, node_h):
         self.node_h = node_h
 
         self.d_port = {}
+        self.d_qual = {}
 
-    def add_qual(self, k, v):
-        if k in self.d_tqual:
-            raise Exception(f'Dupe tqual for key {k}')
-        self.d_tqual = Tqual(k=k, v=v)
-
-    def add_port(self, port_h, cs_h, load_h):
-        if port_h in self.d_port:
-            raise Exception(f'Dupe port for key {k}')
-        ns_port = Ns()
-        ns_port.cs_h = cs_h
-        ns_port.load_h = load_h
-        self.d_port[port_h] = ns_port
+    def get_port(self, port_h):
+        return self.d_port.get(port_h)
 
 
 class Plan:
@@ -81,30 +86,19 @@ class Design:
         util_attach_log(self)
 
         self.d_cs = {}
-        self.d_compat = {}
+        self.d_compat = {} # <cs_h, Set>
         self.d_load = {}
         self.d_site = {}
         self.d_plan = {}
 
-    def add_compat(self, x_cs_h, y_cs_h):
-        # xxx do an alphabetical order test here to make sure that x is
-        # less-than-or-equal-to y in alphabetical ordering. Throw an exception
-        # if they are not.
-
-        for cs_h in (x_cs_h, y_cs_h):
-            if cs_h not in self.d_cs:
-                raise Exception(f'Unknown connection-standard {cs_h}')
-        del cs_h
-
-        def ensure(cs_h):
-            if cs_h not in self.d_compat:
-                self.d_compat[cs_h] = set()
-
-        ensure(x_cs_h)
-        self.d_compat[x_cs_h].add(y_cs_h)
-
-        ensure(y_cs_h)
-        self.d_compat[y_cs_h].add(x_cs_h)
+    def check_compat(self, x_cs_h, y_cs_h):
+        if x_cs_h not in self.d_cs:
+            return False
+        if y_cs_h not in self.d_cs:
+            return False
+        if y_cs_h not in self.d_compat[x_cs_h]:
+            return False
+        return True
 
 
 class DesignIHandler:
@@ -124,6 +118,7 @@ class DesignIHandler:
         self.active_site = None
         self.active_node = None
         self.active_plan = None
+        self.active_port = None
 
     def on_include(self, relpath):
         '''
@@ -141,11 +136,15 @@ class DesignIHandler:
 
         ns_cs = Ns()
         self.design.d_cs[cs_h] = ns_cs
+        self.design.d_compat[cs_h] = set()
 
     def on_compat(self, x_cs_h, y_cs_h):
-        self.design.add_compat(
-            x_cs_h=x_cs_h,
-            y_cs_h=y_cs_h)
+        for cs_h in (x_cs_h, y_cs_h):
+            if cs_h not in self.design.d_cs:
+                raise Exception(f'Cs not defined {cs_h}')
+
+        self.design.d_compat[x_cs_h].add(y_cs_h)
+        self.design.d_compat[y_cs_h].add(x_cs_h)
 
     def on_load(self, load_h):
         load = Load(
@@ -185,11 +184,14 @@ class DesignIHandler:
             raise Exception('Message qual is only valid within a node scope')
         if k in self.active_node.d_qual:
             raise Exception(f'Dupe qual {k}')
-        self.active_node.add_tqual(
+        self.active_node.add_qual(
             k=k,
             v=v)
+        if k in self.active_node.d_qual:
+            raise Exception(f'Dupe qual for key {k}')
+        self.d_qual[k] = v
 
-    def on_port(self, port_h, cs_h, load_h):
+    def on_port(self, port_h, cs_h):
         if self.active_node == None:
             raise Exception('Message port is only valid within a node scope')
         if port_h in self.active_node.d_port:
@@ -197,22 +199,51 @@ class DesignIHandler:
         if cs_h not in self.design.d_cs:
             raise Exception(f'Unknown connection standard (cs) {cs_h}')
 
-        self.active_node.add_port(
+        if port_h in self.active_node.d_port:
+            raise Exception(f'Dupe port for key {k}')
+        port = Port(
             port_h=port_h,
-            cs_h=cs_h,
-            load_h=load_h)
+            cs_h=cs_h)
+        self.active_node.d_port[port_h] = port
+
+        self.active_port = port
 
     def on_to(self, portref):
         '''
         Links the port that is currently in scope to this other port.
         '''
-        xxx
+        lst_ref = portref.split('.')
+        if len(lst_ref) != 2:
+            raise Exception(f'Invalid portref {portref}')
+        (node_h, port_h) = lst_ref
+
+        our_port = self.active_port
+        far_node = self.active_site.d_node.get(node_h)
+        if far_node == None:
+            raise Exception(f'No node {node_h} in this site')
+        far_port = far_node.get_port(port_h)
+        if far_port == None:
+            raise Exception(f'No port {port_h} in node {node_h}')
+
+        a = our_port.cs_h
+        b = far_port.cs_h
+        if not self.design.check_compat(a, b):
+            raise Exception(f'Cs {a} has no compat with Cs {b}')
+
+        if our_port.link_portref:
+            raise Exception(f'src already conn to {our_port.link_portref}')
+        if far_port.link_portref:
+            raise Exception(f'dst already conn to {far_port.link_portref}')
+
+        our_port.link_portref = portref
+        far_port.link_portref = f'{self.active_node.node_h}.{self.active_port.port_h}'
 
     def on_node_x(self):
         if self.active_node == None:
             raise Exception('There is no node scope open.')
 
         self.active_node = None
+        self.active_port = None
 
     def on_site_x(self):
         if self.active_site == None:

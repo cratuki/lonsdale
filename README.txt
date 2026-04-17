@@ -175,6 +175,12 @@ ensure that the design was not running 12V into 5V circuits?
 The connection syntax of the current syntax accounts for this. Whereas I think
 craft-centric would struggle to accomodate this.
 
+... Why are many of the relationships between nodes marked with a load of l_unknown?
+
+There are certain problems where it is useful to represent loads, but for many
+problems it is unnecessary. Interface script explicitly avoids having optional
+arguments in messages because it leads to compiler complexity.
+
 
 // Prompt for review work with AI instances
 
@@ -214,8 +220,29 @@ Technical Implementation
     for engineers to reclaim structural clarity from complex, poorly
     documented systems.
 
+Milestones,
 
+    Milestone: Have a source-of-truth for the 504 GL post-1974.
 
+    Milestone: Have a source-of-truth for the 505 GTI Series I.
+
+    Milestone: Represent my intended build as a distinct vehicle design,
+    building on the types we hae established from earlier milestones.
+
+We do not need to worry about mechanical stress modeling in the near-future.
+
+To balance our goal of Lego-like compatibility without getting bogged down in
+LH/RH specifics, we should:
+
+    Use specific _lh and _rh ports for the Shell and Subframe, as these are
+    fixed physical locations.
+
+    Keep the Nodes (like lower_control_arm or front_hub) generic where the
+    part itself is interchangeable or the interface is identical.￼
+
+    This ensures that a cs_504_lca_outer_ball_joint on a 505 part will
+    immediately flag as compatible or incompatible regardless of which side it
+    is on.
 
 
 
